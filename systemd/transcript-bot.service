@@ -1,0 +1,24 @@
+[Unit]
+Description=YouTube Transcript Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=transcript-bot
+Group=transcript-bot
+WorkingDirectory=/opt/transcript-bot
+EnvironmentFile=/opt/transcript-bot/.env
+ExecStart=/opt/transcript-bot/.venv/bin/transcript-bot
+Restart=on-failure
+RestartSec=10
+# Allow time for Whisper model to load on first start
+TimeoutStartSec=120
+# Lower scheduling priority so Whisper doesn't starve other processes
+Nice=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=transcript-bot
+
+[Install]
+WantedBy=multi-user.target

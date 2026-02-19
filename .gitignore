@@ -1,0 +1,16 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+dist/
+build/
+*.m4a
+*.mp3
+*.wav
+*_transcript.txt
+logs/
+.DS_Store
+.claude/
+bot.log

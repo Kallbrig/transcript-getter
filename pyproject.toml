@@ -1,0 +1,22 @@
+[project]
+name = "transcript-bot"
+version = "0.1.0"
+description = "Telegram bot for fetching YouTube transcripts"
+requires-python = ">=3.11"
+dependencies = [
+    "python-telegram-bot[job-queue]>=21.0",
+    "faster-whisper>=1.0.0",
+    "yt-dlp>=2024.1.1",
+    "youtube-transcript-api>=0.6.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+transcript-bot = "transcript_bot.main:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[tool.setuptools.packages.find]
+where = ["src"]
