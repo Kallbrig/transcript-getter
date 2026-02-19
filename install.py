@@ -590,6 +590,15 @@ def create_system_user():
     print_ok(f"System user '{SERVICE_USER}' created")
 
 
+def create_cache_dir():
+    """Create /opt/transcript-bot/.cache with correct ownership for HuggingFace models."""
+    cache_dir = OPT_DIR / ".cache"
+    print_step(f"Creating cache directory {cache_dir}...")
+    run_cmd(["sudo", "mkdir", "-p", str(cache_dir)])
+    run_cmd(["sudo", "chown", f"{SERVICE_USER}:{SERVICE_USER}", str(cache_dir)])
+    print_ok("Cache directory ready")
+
+
 def deploy_to_opt(project_dir: pathlib.Path):
     print_step(f"Deploying project files to {OPT_DIR}...")
     run_cmd(["sudo", "mkdir", "-p", str(OPT_DIR)])
@@ -943,6 +952,7 @@ def cmd_setup(project_dir: pathlib.Path):
         stop_service_if_running()
         create_system_user()
         deploy_to_opt(project_dir)
+        create_cache_dir()
         write_opt_env(values)
         run_uv_sync_opt()
         install_systemd_service()

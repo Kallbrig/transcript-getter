@@ -9,6 +9,7 @@ User=transcript-bot
 Group=transcript-bot
 WorkingDirectory=/opt/transcript-bot
 EnvironmentFile=/opt/transcript-bot/.env
+Environment=HF_HOME=/opt/transcript-bot/.cache
 ExecStart=/opt/transcript-bot/.venv/bin/transcript-bot
 Restart=on-failure
 RestartSec=10
