@@ -6,9 +6,9 @@ Handles full installation on macOS (dev) and Ubuntu (production).
 Uses only Python stdlib — safe to run before the project venv exists.
 
 Usage:
-  python3 setup.py            Full interactive setup
-  python3 setup.py --check    Show current config values and exit
-  python3 setup.py --restart  (Ubuntu only) Restart the systemd service and exit
+  python3 install.py            Full interactive setup
+  python3 install.py --check    Show current config values and exit
+  python3 install.py --restart  (Ubuntu only) Restart the systemd service and exit
 """
 
 import argparse
