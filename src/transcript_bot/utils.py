@@ -16,6 +16,7 @@ _INSTAGRAM_PATTERN = re.compile(
 )
 
 _VIDEO_ID_PATTERN = re.compile(r"[a-zA-Z0-9_-]{11}")
+_SAFE_VIDEO_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
 
 
 def is_youtube_url(text: str) -> bool:
@@ -63,10 +64,18 @@ def format_transcript_file(title: str, channel: str, transcript: str, source: st
     return f"# {title}\n{channel} ({source})\n\n{transcript}\n"
 
 
+def validate_video_id(video_id: str) -> str:
+    """Validate that a video_id is safe for use in file paths."""
+    if not video_id or not _SAFE_VIDEO_ID_PATTERN.match(video_id):
+        raise ValueError(f"Invalid video ID: {video_id!r}")
+    return video_id
+
+
 def write_transcript(
     title: str, channel: str, transcript: str, video_id: str, work_dir: Path,
     source: str = "YouTube",
 ) -> Path:
+    video_id = validate_video_id(video_id)
     content = format_transcript_file(title, channel, transcript, source=source)
     path = work_dir / f"{video_id}_transcript.txt"
     path.write_text(content, encoding="utf-8")

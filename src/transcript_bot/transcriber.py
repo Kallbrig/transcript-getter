@@ -1,4 +1,5 @@
 import logging
+import threading
 from pathlib import Path
 
 from faster_whisper import WhisperModel
@@ -8,6 +9,7 @@ from .config import Config
 logger = logging.getLogger(__name__)
 
 _model_cache: WhisperModel | None = None
+_inference_lock = threading.Lock()
 
 
 def get_whisper_model(config: Config) -> WhisperModel:
@@ -45,6 +47,11 @@ def transcribe_audio(audio_path: Path, model: WhisperModel, config: Config) -> s
     """
     logger.info("Starting transcription of %s", audio_path)
 
+    with _inference_lock:
+        return _transcribe_locked(audio_path, model, config)
+
+
+def _transcribe_locked(audio_path: Path, model: WhisperModel, config: Config) -> str:
     segments, info = model.transcribe(
         str(audio_path),
         beam_size=5,

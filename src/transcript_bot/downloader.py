@@ -4,6 +4,8 @@ from pathlib import Path
 
 import yt_dlp
 
+from .utils import validate_video_id
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,8 +44,12 @@ def fetch_metadata(url: str) -> VideoMetadata:
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
+            raw_id = info.get("id")
+            if not raw_id:
+                raise DownloadError("Video metadata missing 'id' field")
+            video_id = validate_video_id(raw_id)
             return VideoMetadata(
-                video_id=info.get("id", "unknown"),
+                video_id=video_id,
                 title=info.get("title", "Unknown Title"),
                 channel=info.get("uploader") or info.get("channel", "Unknown Channel"),
                 source=info.get("extractor_key", "YouTube"),
@@ -79,7 +85,10 @@ def download_audio(url: str, work_dir: Path) -> VideoInfo:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
 
-        video_id = info.get("id", "unknown")
+        raw_id = info.get("id")
+        if not raw_id:
+            raise DownloadError("Downloaded video missing 'id' field")
+        video_id = validate_video_id(raw_id)
         title = info.get("title", "Unknown Title")
         channel = info.get("uploader") or info.get("channel", "Unknown Channel")
         source = info.get("extractor_key", "YouTube")

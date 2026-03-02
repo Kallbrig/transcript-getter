@@ -18,7 +18,8 @@ def main() -> None:
     logger = logging.getLogger(__name__)
 
     logger.info("Starting transcript bot")
-    logger.info("Allowed user IDs: %s", config.allowed_user_ids)
+    logger.info("Allowed users: %d user(s) configured", len(config.allowed_user_ids))
+    logger.debug("Allowed user IDs: %s", config.allowed_user_ids)
     logger.info(
         "Whisper model: %s / compute_type: %s",
         config.whisper_model,

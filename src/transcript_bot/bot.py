@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from collections import defaultdict
 from functools import partial
 from pathlib import Path
 
@@ -20,6 +21,9 @@ from .transcriber import get_whisper_model, transcribe_audio
 from .utils import cleanup_files, extract_video_id, is_youtube_url, is_supported_url, safe_filename, write_transcript
 
 logger = logging.getLogger(__name__)
+
+# Per-user semaphore: one active job at a time per user
+_user_semaphores: dict[int, asyncio.Semaphore] = defaultdict(lambda: asyncio.Semaphore(1))
 
 
 def build_application(config: Config) -> Application:
@@ -58,11 +62,17 @@ async def handle_url_message(
         )
         return
 
+    user_id = update.effective_user.id
+    sem = _user_semaphores[user_id]
+    if sem.locked():
+        await update.message.reply_text("You already have a job in progress. Please wait for it to finish.")
+        return
+
     ack = await update.message.reply_text(
         "Downloading and transcribing with Whisper. This may take a few minutes for long videos..."
     )
-    asyncio.get_event_loop().create_task(
-        _run_slow_pipeline(update, context, config, text, ack.message_id)
+    asyncio.create_task(
+        _guarded_pipeline(sem, _run_slow_pipeline(update, context, config, text, ack.message_id))
     )
 
 
@@ -84,20 +94,32 @@ async def handle_fast_command(
         await update.message.reply_text("That doesn't look like a supported URL (YouTube or Instagram).")
         return
 
+    user_id = update.effective_user.id
+    sem = _user_semaphores[user_id]
+    if sem.locked():
+        await update.message.reply_text("You already have a job in progress. Please wait for it to finish.")
+        return
+
     if not is_youtube_url(url):
         # Instagram has no caption API — fall back to Whisper
         ack = await update.message.reply_text(
             "Instagram detected. Downloading and transcribing with Whisper..."
         )
-        asyncio.get_event_loop().create_task(
-            _run_slow_pipeline(update, context, config, url, ack.message_id)
+        asyncio.create_task(
+            _guarded_pipeline(sem, _run_slow_pipeline(update, context, config, url, ack.message_id))
         )
         return
 
     ack = await update.message.reply_text("Fetching captions...")
-    asyncio.get_event_loop().create_task(
-        _run_fast_pipeline(update, context, config, url, ack.message_id)
+    asyncio.create_task(
+        _guarded_pipeline(sem, _run_fast_pipeline(update, context, config, url, ack.message_id))
     )
+
+
+async def _guarded_pipeline(sem: asyncio.Semaphore, coro) -> None:
+    """Run a pipeline coroutine under a per-user semaphore."""
+    async with sem:
+        await coro
 
 
 async def _run_slow_pipeline(
@@ -144,10 +166,10 @@ async def _run_slow_pipeline(
 
     except DownloadError as e:
         logger.error("Download failed for %s: %s", url, e)
-        await context.bot.send_message(chat_id, f"Download failed: {e}")
+        await context.bot.send_message(chat_id, "Download failed. The URL may be invalid or the video unavailable.")
     except Exception as e:
         logger.exception("Slow pipeline error for %s", url)
-        await context.bot.send_message(chat_id, f"Error: {e}")
+        await context.bot.send_message(chat_id, "An unexpected error occurred. Please try again later.")
     finally:
         cleanup_files(audio_path, transcript_path)
 
@@ -191,13 +213,13 @@ async def _run_fast_pipeline(
 
     except CaptionError as e:
         logger.warning("Caption fetch failed for %s: %s", url, e)
-        await context.bot.send_message(chat_id, f"Caption error: {e}")
+        await context.bot.send_message(chat_id, "Could not fetch captions. The video may not have subtitles available.")
     except DownloadError as e:
         logger.error("Metadata fetch failed for %s: %s", url, e)
-        await context.bot.send_message(chat_id, f"Failed to fetch video info: {e}")
+        await context.bot.send_message(chat_id, "Failed to fetch video info. The URL may be invalid or the video unavailable.")
     except Exception as e:
         logger.exception("Fast pipeline error for %s", url)
-        await context.bot.send_message(chat_id, f"Error: {e}")
+        await context.bot.send_message(chat_id, "An unexpected error occurred. Please try again later.")
     finally:
         cleanup_files(transcript_path)
 
