@@ -17,7 +17,7 @@ from .captions import CaptionError, fetch_captions
 from .config import Config
 from .downloader import DownloadError, VideoInfo, download_audio, fetch_metadata
 from .transcriber import get_whisper_model, transcribe_audio
-from .utils import cleanup_files, extract_video_id, is_youtube_url, safe_filename, write_transcript
+from .utils import cleanup_files, extract_video_id, is_youtube_url, is_supported_url, safe_filename, write_transcript
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +51,10 @@ async def handle_url_message(
         return  # silent rejection
 
     text = update.message.text.strip()
-    if not is_youtube_url(text):
+    if not is_supported_url(text):
         await update.message.reply_text(
-            "Send a YouTube URL to get a transcript, or use /fast <url> for quick captions."
+            "Send a YouTube or Instagram video URL to get a transcript.\n"
+            "For YouTube, you can also use /fast <url> to fetch captions instantly."
         )
         return
 
@@ -79,8 +80,18 @@ async def handle_fast_command(
         return
 
     url = args[0].strip()
+    if not is_supported_url(url):
+        await update.message.reply_text("That doesn't look like a supported URL (YouTube or Instagram).")
+        return
+
     if not is_youtube_url(url):
-        await update.message.reply_text("That doesn't look like a YouTube URL.")
+        # Instagram has no caption API — fall back to Whisper
+        ack = await update.message.reply_text(
+            "Instagram detected. Downloading and transcribing with Whisper..."
+        )
+        asyncio.get_event_loop().create_task(
+            _run_slow_pipeline(update, context, config, url, ack.message_id)
+        )
         return
 
     ack = await update.message.reply_text("Fetching captions...")
@@ -119,6 +130,7 @@ async def _run_slow_pipeline(
             transcript=transcript_text,
             video_id=video_info.video_id,
             work_dir=config.work_dir,
+            source=video_info.source,
         )
 
         filename = f"{safe_filename(video_info.title)}.txt"
@@ -165,6 +177,7 @@ async def _run_fast_pipeline(
             transcript=transcript_text,
             video_id=video_id,
             work_dir=config.work_dir,
+            source=metadata.source,
         )
 
         filename = f"{safe_filename(metadata.title)}.txt"

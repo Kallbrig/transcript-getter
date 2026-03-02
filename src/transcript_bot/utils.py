@@ -11,11 +11,23 @@ _YOUTUBE_PATTERN = re.compile(
     r"[a-zA-Z0-9_?=&-]+"
 )
 
+_INSTAGRAM_PATTERN = re.compile(
+    r"(https?://)?(www\.)?instagram\.com/(reel|p)/[a-zA-Z0-9_-]+"
+)
+
 _VIDEO_ID_PATTERN = re.compile(r"[a-zA-Z0-9_-]{11}")
 
 
 def is_youtube_url(text: str) -> bool:
     return bool(_YOUTUBE_PATTERN.search(text))
+
+
+def is_instagram_url(text: str) -> bool:
+    return bool(_INSTAGRAM_PATTERN.search(text))
+
+
+def is_supported_url(text: str) -> bool:
+    return is_youtube_url(text) or is_instagram_url(text)
 
 
 def extract_video_id(url: str) -> str:
@@ -46,15 +58,16 @@ def extract_video_id(url: str) -> str:
     raise ValueError(f"Cannot extract video ID from URL: {url}")
 
 
-def format_transcript_file(title: str, channel: str, transcript: str) -> str:
+def format_transcript_file(title: str, channel: str, transcript: str, source: str = "YouTube") -> str:
     """Format the transcript file content with a header."""
-    return f"# {title}\n{channel}\n\n{transcript}\n"
+    return f"# {title}\n{channel} ({source})\n\n{transcript}\n"
 
 
 def write_transcript(
-    title: str, channel: str, transcript: str, video_id: str, work_dir: Path
+    title: str, channel: str, transcript: str, video_id: str, work_dir: Path,
+    source: str = "YouTube",
 ) -> Path:
-    content = format_transcript_file(title, channel, transcript)
+    content = format_transcript_file(title, channel, transcript, source=source)
     path = work_dir / f"{video_id}_transcript.txt"
     path.write_text(content, encoding="utf-8")
     logger.debug("Transcript written to %s", path)

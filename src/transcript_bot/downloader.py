@@ -17,6 +17,7 @@ class VideoInfo:
     title: str
     channel: str
     audio_path: Path
+    source: str = "YouTube"
 
 
 @dataclass
@@ -24,6 +25,7 @@ class VideoMetadata:
     video_id: str
     title: str
     channel: str
+    source: str = "YouTube"
 
 
 def fetch_metadata(url: str) -> VideoMetadata:
@@ -44,6 +46,7 @@ def fetch_metadata(url: str) -> VideoMetadata:
                 video_id=info.get("id", "unknown"),
                 title=info.get("title", "Unknown Title"),
                 channel=info.get("uploader") or info.get("channel", "Unknown Channel"),
+                source=info.get("extractor_key", "YouTube"),
             )
     except yt_dlp.utils.DownloadError as e:
         raise DownloadError(str(e)) from e
@@ -79,6 +82,7 @@ def download_audio(url: str, work_dir: Path) -> VideoInfo:
         video_id = info.get("id", "unknown")
         title = info.get("title", "Unknown Title")
         channel = info.get("uploader") or info.get("channel", "Unknown Channel")
+        source = info.get("extractor_key", "YouTube")
 
         # After FFmpegExtractAudio the file is renamed to .m4a
         audio_path = work_dir / f"{video_id}.m4a"
@@ -100,6 +104,7 @@ def download_audio(url: str, work_dir: Path) -> VideoInfo:
             title=title,
             channel=channel,
             audio_path=audio_path,
+            source=source,
         )
 
     except yt_dlp.utils.DownloadError as e:

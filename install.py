@@ -783,7 +783,7 @@ def configure_env(project_dir: pathlib.Path) -> dict:
 
 def print_siri_instructions():
     print_header("iOS Share Sheet Setup (Siri Shortcuts)")
-    print(f"""  This bot accepts YouTube URLs and returns the transcript as a .txt file.
+    print(f"""  This bot accepts YouTube and Instagram video URLs and returns the transcript as a .txt file.
   You can trigger it directly from the iOS Share Sheet using Siri Shortcuts.
 
   {BOLD}─── Mode 1: Full Whisper Transcription (accurate, takes a few minutes) ───{RESET}
